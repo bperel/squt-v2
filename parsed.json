@@ -1,0 +1,136 @@
+{
+  "constraints": [
+	{
+	  "type": "alignment",
+	  "axis": "x",
+	  "offsets": [
+		{
+		  "node": "1",
+		  "offset": "0"
+		},
+		{
+		  "node": "2",
+		  "offset": "0"
+		},
+		{
+		  "node": "3",
+		  "offset": "0"
+		}
+	  ]
+	},
+	{
+	  "type": "alignment",
+	  "axis": "y",
+	  "offsets": [
+		{
+		  "node": "0",
+		  "offset": "0"
+		},
+		{
+		  "node": "1",
+		  "offset": "0"
+		},
+		{
+		  "node": "4",
+		  "offset": "0"
+		}
+	  ]
+	},
+	{
+	  "axis": "y",
+	  "left": 2,
+	  "right": 3,
+	  "gap": 50,
+	  "equality": "true"
+	}
+  ],
+  "statements": [
+	{
+	  "expr": [
+		{
+		  "database": null,
+		  "table": "co",
+		  "column": "ContractID",
+		  "expr": "co.ContractID",
+		  "alias": "ID",
+		  "function": null,
+		  "subquery": null
+		},
+		{
+		  "database": null,
+		  "table": null,
+		  "column": null,
+		  "expr": "CONCAT(p.firstName, p.lastName)",
+		  "alias": "PersonFullName",
+		  "function": "CONCAT",
+		  "subquery": null
+		}
+	  ],
+	  "from": [
+		{
+		  "database": null,
+		  "table": "contract",
+		  "column": null,
+		  "expr": "contract",
+		  "alias": "co",
+		  "function": null,
+		  "subquery": null
+		}
+	  ],
+	  "partition": null,
+	  "where": [
+		{
+		  "identifiers": [
+			"co",
+			"isActive"
+		  ],
+		  "isOperator": false,
+		  "expr": "co.isActive = 1"
+		}
+	  ],
+	  "group": null,
+	  "having": null,
+	  "order": null,
+	  "limit": {
+		"offset": 2,
+		"rowCount": 3
+	  },
+	  "procedure": null,
+	  "into": null,
+	  "join": [
+		{
+		  "type": "INNER",
+		  "expr": {
+			"database": null,
+			"table": "Person",
+			"column": null,
+			"expr": "Person",
+			"alias": "p",
+			"function": null,
+			"subquery": null
+		  },
+		  "on": [
+			{
+			  "identifiers": [
+				"co",
+				"personInChargeID",
+				"p",
+				"ID"
+			  ],
+			  "isOperator": false,
+			  "expr": "co.personInChargeID = p.ID"
+			}
+		  ],
+		  "using": null
+		}
+	  ],
+	  "union": [],
+	  "end_options": null,
+	  "options": {
+		"options": []
+	  },
+	  "first": 0,
+	  "last": 66
+	}
+  ]
+}

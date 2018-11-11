@@ -22,11 +22,14 @@ d3.json("parsed.json", function (error, response) {
         return nodeId;
     }
 
-    const tables = [], columns = [];
+    const tables = [],
+          columns = [],
+          aliases = [];
     response.statements.forEach(function(statement) {
         statement.from.forEach(function(from) {
             if (from.table) {
-                tables.push(from)
+                tables.push(from);
+                aliases.push({table: from.table, alias: from.alias})
             }
         });
         statement.join.forEach(function(join) {
@@ -48,6 +51,13 @@ d3.json("parsed.json", function (error, response) {
         const tableNodeId = addNode(table.table, "table-title", table);
         graph.groups.push({id: tableNodeId, leaves: [tableNodeId]})
     });
+
+    aliases.forEach(function(alias) {
+        const aliasNodeId = addNode(alias.alias, "table-alias", alias);
+        const relatedTable = graph.nodes.filter(function(node) { return node.type === "table-title" && node.name === alias.table})[0];
+        graph.groups.filter(function(group) { return group.id === relatedTable.id})[0].leaves.push(aliasNodeId);
+    });
+
     columns.forEach(function(column){
         const relatedNodes = graph.nodes.filter(function (otherNode) {
             return (column.table === otherNode.table || column.table === otherNode.alias) && otherNode.type === "table-title"

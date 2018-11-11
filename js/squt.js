@@ -1,28 +1,42 @@
-var width = 800,
-    height = 400;
+const width = 800,
+      height = 400;
 
-var d3cola = cola.d3adaptor(d3)
+const d3cola = cola.d3adaptor(d3)
     .linkDistance(120)
     .avoidOverlaps(true)
     .size([width, height]);
 
-var svg = d3.select("body").append("svg")
+const svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
 
-var groupPadding = 3;
+const groupPadding = 3;
 
-d3.json("parsed.json", function (error, graph) {
-    var tables = [], columns = [];
-    graph.statements.forEach(function(statement) {
-        statement.expr.forEach(function(expr) {
-            if (expr.table) {
-                columns.push(expr)
-            }
-        });
+let graph = {};
+
+d3.json("parsed.json", function (error, response) {
+
+    function addNode(title, type, data) {
+        const nodeId = graph.nodes.length;
+        graph.nodes.push(Object.assign({}, data, {id: nodeId, name: title, type: type}));
+        return nodeId;
+    }
+
+    const tables = [], columns = [];
+    response.statements.forEach(function(statement) {
         statement.from.forEach(function(from) {
             if (from.table) {
                 tables.push(from)
+            }
+        });
+        statement.join.forEach(function(join) {
+            if (join.expr) {
+                tables.push(join.expr)
+            }
+        });
+        statement.expr.forEach(function(expr) {
+            if (expr.table) {
+                columns.push(expr)
             }
         });
     });
@@ -31,21 +45,20 @@ d3.json("parsed.json", function (error, graph) {
     graph.constraints = [];
 
     tables.forEach(function(table) {
-        graph.nodes.push(Object.assign({}, table, {name: table.table, type: "table-title"}));
+        const tableNodeId = addNode(table.table, "table-title", table);
+        graph.groups.push({id: tableNodeId, leaves: [tableNodeId]})
     });
-    columns.forEach(function(column, i){
-        graph.nodes.push(Object.assign({}, column, {name: column.column, type: "table-column"}));
-        graph.nodes.filter(function(otherNode, j) {
-            return (column.table === otherNode.table && (otherNode.type === "table-title" || (otherNode.type === "table-column"))) ||
-                   (column.table === otherNode.alias && otherNode.type === "table-title")
-        })
-            .forEach(function(otherColumn, j) {
-                graph.groups.push({leaves: [j, i]})
-            });
+    columns.forEach(function(column){
+        const relatedNodes = graph.nodes.filter(function (otherNode) {
+            return (column.table === otherNode.table || column.table === otherNode.alias) && otherNode.type === "table-title"
+        });
+        const columnNodeId = addNode(column.column, "table-column", column);
+        relatedNodes.forEach(function(relatedNode) {
+            graph.groups.filter(function(group) { return group.id === relatedNode.id})[0].leaves.push(columnNodeId);
+        });
     });
 
     graph.links = [];
-
 
     graph.nodes.forEach(function (v) {
         v.width = 60 + v.name.length * 16;
@@ -58,7 +71,6 @@ d3.json("parsed.json", function (error, graph) {
         .constraints(graph.constraints)
         .start(10, 10, 10);
 
-
     var group = svg.selectAll(".group")
         .data(graph.groups)
         .enter().append("rect")
@@ -66,27 +78,26 @@ d3.json("parsed.json", function (error, graph) {
         .attr("rx", 8).attr("ry", 8)
         .call(d3cola.drag);
 
-    var link = svg.selectAll(".link")
+    const link = svg.selectAll(".link")
         .data(graph.links)
         .enter().append("line")
         .attr("class", "link");
 
-    var node = svg.selectAll(".node")
+    const node = svg.selectAll(".node")
         .data(graph.nodes)
         .enter().append("rect")
-        .attr("class", function(d) { return "node " + d.type; })
+        .attr("class", function (d) {
+            return "node " + d.type;
+        })
         .attr("width", function (d) {
-            return d.width - groupPadding*2;
+            return d.width - groupPadding * 2;
         })
         .attr("height", function (d) {
-            return d.height - groupPadding*2;
+            return d.height - groupPadding * 2;
         })
-        .attr("rx", 5).attr("ry", 5)/*
-        .style("fill", function (d) {
-            return color(1);
-        })*/;
+        .attr("rx", 5).attr("ry", 5);
 
-    var label = svg.selectAll(".label")
+    const label = svg.selectAll(".label")
         .data(graph.nodes)
         .enter().append("text")
         .attr("class", "label")
@@ -142,7 +153,7 @@ d3.json("parsed.json", function (error, graph) {
                 return d.x;
             })
             .attr("y", function (d) {
-                var h = this.getBBox().height;
+                const h = this.getBBox().height;
                 return d.y + h / 4;
             });
     });

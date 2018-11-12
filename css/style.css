@@ -16,6 +16,11 @@
     stroke: none;
 }
 
+.node.table-alias {
+    fill: blue;
+    stroke: none;
+}
+
 .link {
     stroke: #999;
     stroke-width: 3px;

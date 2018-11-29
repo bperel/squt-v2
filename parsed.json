@@ -1,49 +1,4 @@
 {
-  "constraints": [
-	{
-	  "type": "alignment",
-	  "axis": "x",
-	  "offsets": [
-		{
-		  "node": "1",
-		  "offset": "0"
-		},
-		{
-		  "node": "2",
-		  "offset": "0"
-		},
-		{
-		  "node": "3",
-		  "offset": "0"
-		}
-	  ]
-	},
-	{
-	  "type": "alignment",
-	  "axis": "y",
-	  "offsets": [
-		{
-		  "node": "0",
-		  "offset": "0"
-		},
-		{
-		  "node": "1",
-		  "offset": "0"
-		},
-		{
-		  "node": "4",
-		  "offset": "0"
-		}
-	  ]
-	},
-	{
-	  "axis": "y",
-	  "left": 2,
-	  "right": 3,
-	  "gap": 50,
-	  "equality": "true"
-	}
-  ],
   "statements": [
 	{
 	  "expr": [
@@ -53,6 +8,15 @@
 		  "column": "ContractID",
 		  "expr": "co.ContractID",
 		  "alias": "ID",
+		  "function": null,
+		  "subquery": null
+		},
+		{
+		  "database": null,
+		  "table": "co",
+		  "column": "test",
+		  "expr": "co.test",
+		  "alias": "ID2",
 		  "function": null,
 		  "subquery": null
 		},

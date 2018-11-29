@@ -18,9 +18,10 @@ svg {
     stroke-width: 1.5px;
 }
 
-.node.table-title {
-    fill: none;
+rect.table-title {
+    fill: white;
     stroke: none;
+    opacity: 0.2;
 }
 
 .node-center {

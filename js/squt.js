@@ -25,6 +25,15 @@ const tables = [],
       tableAliases = [],
       columnAliases = [];
 
+function getRelatedAliasTableFromColumnAlias(alias) {
+    return graph.nodes.filter(function(node) { return node.type === "table-alias" && node.name === alias})[0];
+}
+
+function getRelatedTableFromColumnAlias(alias) {
+    const relatedAliasTable = getRelatedAliasTableFromColumnAlias(alias);
+    return graph.nodes.filter(function(node) { return node.type === "table-title" && node.name === relatedAliasTable.table})[0];
+}
+
 d3.json("parsed.json", function (error, response) {
 
     function addNode(title, type, data, forOutputTable = false) {
@@ -33,17 +42,9 @@ d3.json("parsed.json", function (error, response) {
         graph.nodes.push(Object.assign({}, {id: nodeId, name: title, type: type, width: 200, height: 40}, data));
 
         switch (type) {
-            case 'table-alias':
-                const relatedNodes = graph.nodes.filter(function (otherNode) {
-                    return (data.table === otherNode.table || data.alias === otherNode.table) && otherNode.type !== "table-alias"
-                });
-                graph.nodes[nodeId].height = d3.sum(relatedNodes, function (relatedNode) {
-                    return 40
-                });
-                break;
             case 'column-alias':
-                const relatedAliasTable = graph.nodes.filter(function(node) { return node.type === "table-alias" && node.name === data.table})[0];
-                const relatedTable = graph.nodes.filter(function(node) { return node.type === "table-title" && node.name === relatedAliasTable.table})[0];
+                const relatedAliasTable = getRelatedAliasTableFromColumnAlias(data.table);
+                const relatedTable = getRelatedTableFromColumnAlias(data.table);
                 graph.groups.filter(function(group) { return group.id === relatedTable.id + "_aliases"})[0].leaves.push(nodeId);
 
                 // The column alias and the table alias should be X-aligned
@@ -53,7 +54,6 @@ d3.json("parsed.json", function (error, response) {
                     const columnAliasForOutputNodeId = addNode(title, type, Object.assign({}, data, {table: "output"}), true);
                     // TODO Do not link to output if the column alias isn't part of the output expression
                     graph.links.push({source: nodeId, target: columnAliasForOutputNodeId});
-
 
                     const relatedColumn = graph.nodes.filter(function(node) { return node.type === "table-column" && node.name === data.column && node.table === data.table})[0];
                     // The column alias and the table column should be Y-aligned
@@ -130,7 +130,7 @@ d3.json("parsed.json", function (error, response) {
     });
 
     columnAliases.forEach(function(columnAlias) {
-        const columnAliasNodeId = addNode(columnAlias.alias, "column-alias", columnAlias);
+        addNode(columnAlias.alias, "column-alias", columnAlias);
     });
 
     d3cola
@@ -141,7 +141,7 @@ d3.json("parsed.json", function (error, response) {
         .avoidOverlaps(true)
         .start(10, 10, 10);
 
-    var group = svg.selectAll(".group")
+    const group = svg.selectAll(".group")
         .data(graph.groups)
         .enter().append("rect")
         .attr("id", function(d) { return d.id;})
@@ -149,11 +149,6 @@ d3.json("parsed.json", function (error, response) {
         .attr("rx", 8).attr("ry", 8)
         .style("fill", function (d, i) { return color(i); })
         .call(d3cola.drag);
-
-    const link = svg.selectAll(".link")
-        .data(graph.links)
-        .enter().append("line")
-        .attr("class", "link");
 
     const node = svg.selectAll(".node")
         .data(graph.nodes)
@@ -185,22 +180,12 @@ d3.json("parsed.json", function (error, response) {
             return d.name;
         });
 
+    const link = svg.selectAll(".link")
+        .data(graph.links)
+        .enter().append("line")
+        .attr("class", "link");
+
     d3cola.on("tick", function () {
-
-        group
-            .attr("x", function (d) {
-                return d.bounds.x;
-            })
-            .attr("y", function (d) {
-                return d.bounds.y;
-            })
-            .attr("width", function (d) {
-                return d.bounds.width();
-            })
-            .attr("height", function (d) {
-                return d.bounds.height() + columnTopPadding ;
-            });
-
         link
             .attr("x1", function (d) {
                 return d.source.x;
@@ -238,6 +223,20 @@ d3.json("parsed.json", function (error, response) {
             .attr("y", function (d) {
                 const h = this.getBBox().height;
                 return d.y + columnTopPadding + h / 4;
+            });
+
+        group
+            .attr("x", function (d) {
+                return d.bounds.x;
+            })
+            .attr("y", function (d) {
+                return d.bounds.y;
+            })
+            .attr("width", function (d) {
+                return d.bounds.width();
+            })
+            .attr("height", function (d) {
+                return d.bounds.height() ;
             });
     });
 });

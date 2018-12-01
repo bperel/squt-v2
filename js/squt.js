@@ -3,6 +3,7 @@ const width = 800,
 
 const d3cola = cola.d3adaptor(d3)
     .linkDistance(120)
+    .symmetricDiffLinkLengths(6)
     .avoidOverlaps(true)
     .size([width, height]);
 
@@ -10,6 +11,7 @@ const svg = d3.select("body").append("svg");
 
 const groupPadding = 3;
 const columnTopPadding = 0;
+const tableWidth = 200;
 
 let graph = {
     nodes: [],
@@ -39,7 +41,7 @@ d3.json("parsed.json", function (error, response) {
     function addNode(title, type, data, forOutputTable = false) {
         const nodeId = graph.nodes.length;
 
-        graph.nodes.push(Object.assign({}, {id: nodeId, name: title, type: type, width: 200, height: 40}, data));
+        graph.nodes.push(Object.assign({}, {id: nodeId, name: title, type: type, width: tableWidth, height: 40}, data));
 
         switch (type) {
             case 'column-alias':
@@ -106,17 +108,26 @@ d3.json("parsed.json", function (error, response) {
     });
 
     columns.forEach(function(column){
-        const relatedNodes = graph.nodes.filter(function (otherNode) {
-            return (column.table === otherNode.table || column.table === otherNode.alias) && otherNode.type === "table-title"
-        });
         const columnNodeId = addNode(column.column, "table-column", column);
-        relatedNodes.forEach(function(relatedNode) {
-            graph.groups.filter(function(group) { return group.id === relatedNode.id + "_columns"})[0].leaves.push(columnNodeId);
+        const relatedColumns = graph.nodes.filter(function (otherNode) {
+            return column.table === otherNode.table && otherNode.type === "table-column" && otherNode.id !== columnNodeId;
+        });
 
+        const tableName = graph.nodes.filter(function (otherNode) {
+            return (column.table === otherNode.table || column.table === otherNode.alias) && otherNode.type === "table-title"
+        })[0];
+        graph.groups.filter(function(group) { return group.id === tableName.id + "_columns"})[0].leaves.push(columnNodeId);
+
+        const previousRelatedColumn = relatedColumns[relatedColumns.length - 1];
+        const nodeOnTop = previousRelatedColumn !== undefined ? previousRelatedColumn : tableName;
+
+        if (nodeOnTop) {
             // The column and the table name should be X-aligned
             graph.constraints.push(
-                {type: "alignment", axis: "x", offsets: [{node: relatedNode.id, offset: 0}, {node: columnNodeId, offset: 0}]});
-        });
+                {type: "alignment", axis: "x", offsets: [{node: nodeOnTop.id, offset: 0}, {node: columnNodeId, offset: 0}]});
+            graph.constraints.push(
+                {axis: "y", left: nodeOnTop.id, right: columnNodeId, gap: 40, equality: true});
+        }
     });
 
     tableAliases.forEach(function(tableAlias) {
@@ -127,6 +138,8 @@ d3.json("parsed.json", function (error, response) {
         // The table alias and the table name should be Y-aligned
         graph.constraints.push(
             {type: "alignment", axis: "y", offsets: [{node: relatedTable.id, offset: 0}, {node: tableAliasNodeId, offset: 0}]});
+        graph.constraints.push(
+            {axis: "x", left: relatedTable.id, right: tableAliasNodeId, gap: tableWidth, equality: true});
     });
 
     columnAliases.forEach(function(columnAlias) {
@@ -138,6 +151,7 @@ d3.json("parsed.json", function (error, response) {
         .links(graph.links)
         .groups(graph.groups)
         .constraints(graph.constraints)
+        .linkDistance(200)
         .avoidOverlaps(true)
         .start(10, 10, 10);
 
@@ -153,6 +167,9 @@ d3.json("parsed.json", function (error, response) {
     const node = svg.selectAll(".node")
         .data(graph.nodes)
         .enter().append("rect")
+        .attr("id", function (d, i) {
+            return "node-" + i;
+        })
         .attr("class", function (d) {
             return "node " + d.type;
         })

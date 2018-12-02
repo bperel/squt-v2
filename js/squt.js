@@ -36,14 +36,46 @@ function getRelatedTableFromColumnAlias(alias) {
     return graph.nodes.filter(function(node) { return node.type === "table-title" && node.name === relatedAliasTable.table})[0];
 }
 
+function alignColumnOrAlias(node) {
+    const relatedColumns = graph.nodes.filter(function (otherNode) {
+        return node.table === otherNode.table && otherNode.type === node.type && otherNode.id !== node.id;
+    });
+
+    const tableName = graph.nodes.filter(function (otherNode) {
+        return (node.table === otherNode.table || node.table === otherNode.alias)
+            && ((node.type === 'table-column' && otherNode.type === "table-title") || (node.type === 'column-alias' && otherNode.type === "table-alias"))
+    })[0];
+
+    const previousRelatedColumn = relatedColumns[relatedColumns.length - 1];
+    const nodeOnTop = previousRelatedColumn !== undefined ? previousRelatedColumn : tableName;
+
+    if (nodeOnTop) {
+        // The column and the table name should be X-aligned
+        graph.constraints.push(
+            {type: "alignment", axis: "x", offsets: [{node: nodeOnTop.id, offset: 0}, {node: node.id, offset: 0}]});
+        graph.constraints.push(
+            {axis: "y", left: nodeOnTop.id, right: node.id, gap: 40, equality: true});
+    }
+}
+
 d3.json("parsed.json", function (error, response) {
 
     function addNode(title, type, data, forOutputTable = false) {
         const nodeId = graph.nodes.length;
 
-        graph.nodes.push(Object.assign({}, {id: nodeId, name: title, type: type, width: tableWidth, height: 40}, data));
+        data = Object.assign({}, {id: nodeId, name: title, type: type, width: tableWidth, height: 40}, data);
+        graph.nodes.push(data);
 
         switch (type) {
+            case 'table-column':
+                alignColumnOrAlias(data);
+
+                const tableName = graph.nodes.filter(function (otherNode) {
+                    return (data.table === otherNode.table || data.table === otherNode.alias) && otherNode.type === "table-title"
+                })[0];
+                graph.groups.filter(function(group) { return group.id === tableName.id + "_columns"})[0].leaves.push(data.id);
+
+            break;
             case 'column-alias':
                 const relatedAliasTable = getRelatedAliasTableFromColumnAlias(data.table);
                 const relatedTable = getRelatedTableFromColumnAlias(data.table);
@@ -54,6 +86,8 @@ d3.json("parsed.json", function (error, response) {
                     {type: "alignment", axis: "x", offsets: [{node: relatedAliasTable.id, offset: 0}, {node: nodeId, offset: 0}]});
                 if (!forOutputTable) {
                     const columnAliasForOutputNodeId = addNode(title, type, Object.assign({}, data, {table: "output"}), true);
+                    // alignColumnOrAlias(graph.nodes[columnAliasForOutputNodeId]);
+
                     // TODO Do not link to output if the column alias isn't part of the output expression
                     graph.links.push({source: nodeId, target: columnAliasForOutputNodeId});
 
@@ -61,7 +95,6 @@ d3.json("parsed.json", function (error, response) {
                     // The column alias and the table column should be Y-aligned
                     graph.constraints.push(
                         {type: "alignment", axis: "y", offsets: [{node: relatedColumn.id, offset: 0}, {node: nodeId, offset: 0}]});
-
                 }
                 break;
             default:
@@ -108,26 +141,7 @@ d3.json("parsed.json", function (error, response) {
     });
 
     columns.forEach(function(column){
-        const columnNodeId = addNode(column.column, "table-column", column);
-        const relatedColumns = graph.nodes.filter(function (otherNode) {
-            return column.table === otherNode.table && otherNode.type === "table-column" && otherNode.id !== columnNodeId;
-        });
-
-        const tableName = graph.nodes.filter(function (otherNode) {
-            return (column.table === otherNode.table || column.table === otherNode.alias) && otherNode.type === "table-title"
-        })[0];
-        graph.groups.filter(function(group) { return group.id === tableName.id + "_columns"})[0].leaves.push(columnNodeId);
-
-        const previousRelatedColumn = relatedColumns[relatedColumns.length - 1];
-        const nodeOnTop = previousRelatedColumn !== undefined ? previousRelatedColumn : tableName;
-
-        if (nodeOnTop) {
-            // The column and the table name should be X-aligned
-            graph.constraints.push(
-                {type: "alignment", axis: "x", offsets: [{node: nodeOnTop.id, offset: 0}, {node: columnNodeId, offset: 0}]});
-            graph.constraints.push(
-                {axis: "y", left: nodeOnTop.id, right: columnNodeId, gap: 40, equality: true});
-        }
+        addNode(column.column, "table-column", column);
     });
 
     tableAliases.forEach(function(tableAlias) {

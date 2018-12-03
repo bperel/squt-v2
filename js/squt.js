@@ -92,7 +92,7 @@ d3.json("parsed.json", function (error, response) {
             case 'table-column':
                 relatedTable = graph.nodes.filter(function (otherNode) {
                     return (data.table === otherNode.table || data.table === otherNode.alias)
-                        && ((data.type === 'table-column' && otherNode.type === "table-title") || (data.type === 'column-alias' && otherNode.type === "table-alias"))
+                        && otherNode.type === "table-title"
                 })[0];
                 alignColumnOrAlias(data, relatedTable);
             break;
@@ -112,7 +112,10 @@ d3.json("parsed.json", function (error, response) {
                 graph.constraints.push(
                     {type: "alignment", axis: "x", offsets: [{node: relatedAliasTable.id, offset: 0}, {node: nodeId, offset: 0}]});
                 if (!forOutputTable) {
-                    const columnAliasForOutputNodeId = addNode(title, type, Object.assign({}, data, {table: "output"}), true);
+                    addNode(title, "table-column", {table: "OUTPUT", name: data.name}, true);
+
+                    const columnAliasForOutputNodeId = addNode(title, type, {table: "output", name: data.name}, true);
+                    alignColumnOrAlias(graph.nodes[columnAliasForOutputNodeId], getRelatedTableFromColumnAlias("output"));
 
                     // TODO Do not link to output if the column alias isn't part of the output expression
                     graph.links.push({source: nodeId, target: columnAliasForOutputNodeId});

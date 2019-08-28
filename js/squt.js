@@ -130,7 +130,7 @@ function addNode(title, type, data, forOutputTable = false) {
 (async () => {
     const response = await d3.json("parsed.json");
 
-    response.statements.forEach(statement => {
+    response.forEach(statement => {
         if (statement.expr) {
             tables.push({table: "OUTPUT"});
             tableAliases.push({table: "OUTPUT", alias: "output"})
@@ -240,7 +240,7 @@ function addNode(title, type, data, forOutputTable = false) {
 
         label
           .attr("x", d => d.x)
-          .attr("y", d => { return d.y + columnTopPadding + this.getBBox().height / 4; });
+          .attr("y", function(d) { return d.y + columnTopPadding + this.getBBox().height / 4; });
 
         group
           .attr("x", d => d.bounds.x)

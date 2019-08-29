@@ -67,16 +67,27 @@ function alignTableAlias(node, relatedTable) {
 }
 
 function positionRelativeTo(node, relativeNode, gapAxis, gap) {
-    graph.constraints.push(
-        {type: "alignment", axis: gapAxis === "x" ? "y" : "x", offsets: [{node: relativeNode.id, offset: 0}, {node: node.id, offset: 0}]});
-    graph.constraints.push(
-        {axis: gapAxis, left: relativeNode.id, right: node.id, gap: gap, equality: true});
+    graph.constraints.push({
+      type: "alignment",
+      axis: gapAxis === "x" ? "y" : "x",
+      offsets: [
+        {node: relativeNode.id, offset: 0},
+        {node: node.id, offset: 0}
+      ]
+    });
+    graph.constraints.push({
+      axis: gapAxis,
+      left: relativeNode.id,
+      right: node.id,
+      gap,
+      equality: true
+    });
 }
 
 function addNode(title, type, data, forOutputTable = false) {
     const nodeId = graph.nodes.length;
 
-    data = Object.assign({}, {id: nodeId, name: title, type: type, width: tableWidth, height: 40}, data);
+    data = {...data, id: nodeId, name: title, type, width: tableWidth, height: 40};
     graph.nodes.push(data);
 
     let relatedTable;
